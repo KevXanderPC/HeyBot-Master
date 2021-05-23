@@ -1017,9 +1017,5 @@ app.post('/webhook', express.json(), function(req, res) {
 
 //arrancamos el servidor
 app.listen(PORT, () => {
-    console.log(`Estamos ejecutando en: http: //localhost:${PORT}`);
-});
-
-app.listen(process.env.PORT, () => {
-    console.log('El servidor esta funcionando');
+    console.log(`Our app is running on port ${ PORT }`);
 });
