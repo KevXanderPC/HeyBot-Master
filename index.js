@@ -53,7 +53,7 @@ app.use("/register", registerRouter); */
 
 //setting 
 
-/* var PORT = process.env.PORT || 8000; */
+var PORT = process.env.PORT || 3000;
 /* var maybe_port = process.env.PORT || 8000;
 if (typeof maybe_port === "number") {
     port = maybe_port;
