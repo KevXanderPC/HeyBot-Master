@@ -34,30 +34,24 @@ const db = require('./database/config/db');
 require('./database/models/Login');
 const clientes = require('./database/models/User');
 const contratos = require('./database/models/Contrato');
-const Planes = require('./database/models/Plan');
-const Antena = require('./database/models/Antena');
-const Caja = require('./database/models/Fibra');
-const Equipos = require('./database/models/Equipo');
-const Reportes = require('./database/models/Reporte');
-const Tickets = require('./database/models/Ticket');
-const Facturas = require('./database/models/Factura');
+const planes = require('./database/models/Plan');
+const antenas = require('./database/models/Antena');
+const cajas = require('./database/models/Fibra');
+const equipos = require('./database/models/Equipo');
+const reportes = require('./database/models/Reporte');
+const tickets = require('./database/models/Ticket');
+const facturas = require('./database/models/Factura');
+//database
 db.sync()
     .then(() => console.log('Conectado al servidor'))
     .catch(error => console.log(error));
 
-/* Variables de desarrollo */
-require('dotenv').config({ path: 'variables.env' })
-
-/* app.use("/api", apiRouter);
-app.use("/register", registerRouter); */
-
 //setting 
-
 var PORT = process.env.PORT || 3000;
-/* var maybe_port = process.env.PORT || 8000;
+var maybe_port = process.env.PORT || 3000;
 if (typeof maybe_port === "number") {
     port = maybe_port;
-} */
+}
 process.env.DEBUG = 'dialogflow:debug';
 
 //variables
@@ -65,7 +59,6 @@ const timeZone = 'Ecuador/Quito';
 const timeZoneOffset = '-05:00';
 
 //webhook
-
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -349,15 +342,15 @@ app.post('/webhook', express.json(), function(req, res) {
 
     }
     async function EspecificarContrato(agent) {
-        let contexto2 = agent.context.get('cliente').parameters
+        let contexto = agent.context.get('cliente').parameters
         let contrato;
         let direccion;
-        console.log(contexto2.solucionado)
+        let cliente = contexto.cliente
         try {
             direccion = agent.parameters.direccion
             contrato = await contratos.findOne({
                 where: {
-                    cliente_id: contexto2.cliente.cliente_id,
+                    cliente_id: cliente.cliente_id,
                     direccion: direccion
                 }
             })
@@ -379,7 +372,6 @@ app.post('/webhook', express.json(), function(req, res) {
                 name: 'cliente',
                 lifespan: 15,
                 parameters: {
-                    //'cliente': contexto2.cliente,
                     'contrato': contrato
                 }
             });
@@ -395,6 +387,8 @@ app.post('/webhook', express.json(), function(req, res) {
         let plan;
         let equipo;
         let caja;
+        let motivo;
+        let solucionado;
         requerimiento = 'Servicio Lento'
         try {
             plan = await planes.findOne({
@@ -426,32 +420,23 @@ app.post('/webhook', express.json(), function(req, res) {
                     }
                 })
                 atenuacion = caja.potencia - equipo.potencia
-                agent.context.set({
-                    name: 'cliente',
-                    lifespan: 15,
-                    parameters: {
-                        'requerimiento': 'Servicio Lento',
-                        'equipo': equipo,
-                        'caja': caja
-                    }
-                });
-
-
             } catch (e) {
                 console.log(e);
                 agent.clearOutgoingContexts();
             }
             if (atenuacion >= 5) {
                 agent.add('Tiene la potencia del equipo elevada. Contactese a este numero para pedir ticket de atención')
-                let motivo = "potencia elevada";
-                agent.add("¿Algo mas en lo que  pueda servirle?")
-                agent.context.set({
-                    name: 'cliente',
-                    lifespan: 15,
-                    parameters: {
-                        'motivo': motivo
-                    }
-                });
+                motivo = "Potencia Elevada";
+                solucionado = true
+                await reportes.create({
+                    cliente_id: cliente.cliente_id,
+                    contrato_id: contrato.contrato_id,
+                    requerimiento: requerimiento,
+                    motivo: motivo,
+                    solucionado: solucionado
+                }).then(function(insertedReport) {
+                    console.log(insertedReport.dataValues)
+                })
                 agent.context.set({
                     name: 'finalizar',
                     lifespan: 1,
@@ -497,7 +482,6 @@ app.post('/webhook', express.json(), function(req, res) {
 
     async function SLDisp(agent) {
         let dispositivos = agent.parameters.cantidad
-            // let contexto2 = agent.context.get('equipo').parameters
         let contexto = agent.context.get('cliente').parameters
         let dispositivossistema = contexto.equipo.dispositivos
         console.log(contexto)
@@ -546,17 +530,16 @@ app.post('/webhook', express.json(), function(req, res) {
             agent.add("Esta consumiendo " + JSON.stringify(consumototal) +
                 " megas que supera su plan asignado, por favor controle el ancho de banda o contrate otro plan")
             let motivo = "Consumo elevado"
-            let solucionado = true;
-            agent.context.set({
-                name: 'cliente',
-                lifespan: 15,
-                parameters: {
-                    'motivo': motivo,
-                    'solcionado': solucionado
-                }
-            });
-            agent.add("¿Algo mas en lo que pueda servirle?")
-            agent.setContext({ 'name': 'preguntar', 'lifespan': '1' });
+            let solucionado = true
+            await reportes.create({
+                cliente_id: cliente.cliente_id,
+                contrato_id: contrato.contrato_id,
+                requerimiento: requerimiento,
+                motivo: motivo,
+                solucionado: solucionado
+            }).then(function(insertedReport) {
+                console.log(insertedReport.dataValues)
+            })
         } else {
             agent.add("Por favor indíqueme,¿A cuántos metros del router se esta coenctando?")
         }
@@ -640,10 +623,9 @@ app.post('/webhook', express.json(), function(req, res) {
 
 
     async function SinServicio(agent) {
-        let contexto = agent.context.get('contrato').parameters
-        let contexto2 = agent.context.get('cliente').parameters
+        let contexto = agent.context.get('cliente').parameters
         let contrato = contexto.contrato
-        let cliente = contexto2.cliente
+        let cliente = contexto.cliente
         let plan;
         let antena;
         let caja;
@@ -684,18 +666,10 @@ app.post('/webhook', express.json(), function(req, res) {
                     if (antena.estado == true) {
                         if (equipo.estado == true) {
                             motivo = "Router Inhibido"
-                            agent.add('Por favor verifique que esté debidamente conectado a la red o pruebe con algun otro dispositivo')
+                            agent.add('Por favor pruebe con algun otro dispositivo o reinicie el equipo')
                             agent.context.set({
                                 name: 'Comprobarservicio',
                                 lifespan: 1,
-                            });
-                            agent.context.set({
-                                name: 'requerimiento',
-                                lifespan: 5,
-                                parameters: {
-                                    'requerimiento': requerimiento,
-                                    'motivo': motivo
-                                }
                             });
                             agent.context.delete("SinServicio-followup");
 
@@ -707,6 +681,9 @@ app.post('/webhook', express.json(), function(req, res) {
 
                     } else {
                         agent.add('Mil disculpas estimad@ hay un problema a nivel general. Se resolverá en brevedad posible')
+                        let motivo = "Mantenimiento"
+                        let solucionado = true
+
                     }
                     break;
                 default:
@@ -735,8 +712,8 @@ app.post('/webhook', express.json(), function(req, res) {
                 case true:
                     if (caja.estado == true) {
                         if (equipo.potencia == 0) {
-                            agent.add("Presenta una luz roja encendida en el equipo")
-                            agent.context.delete("Comprobarservicio");
+                            agent.add("¿Presenta una luz roja encendida en el equipo?")
+                            agent.context.delete("luz roja");
                         } else if (equipo.estado == true) {
                             motivo = "Equipo Inhibido"
                             agent.add('Por favor pruebe con otro dispositivo o reinicie el router')
@@ -774,17 +751,13 @@ app.post('/webhook', express.json(), function(req, res) {
                         })
                     }
                 default:
-                    agent.add("Lo sentimos al momento su contrato esta suspendido. Consulte sus facturas para mas información")
+                    agent.add("Lo sentimos al momento su contrato esta suspendido. Comuníquese al 1700 439-439 para mas información")
+                    let motivo = "suspendido"
+                    let solucionado = true;
                     break;
             }
         }
-        agent.context.set({
-            name: 'requerimiento',
-            lifespan: 15,
-            parameters: {
-                'requerimiento': 'Servicio Lento'
-            }
-        });
+
 
     }
 
@@ -843,25 +816,17 @@ app.post('/webhook', express.json(), function(req, res) {
             agent.add('Las oficinas se encuentran cerradas en este momento pero abren de Lunes a Sabado a las 8 AM');
         }
         let requerimiento = "Consulta de horarios"
-        await reportes.create({
-            cliente_id: cliente.cliente_id,
-            contrato_id: contrato.contrato_id,
-            requerimiento: requerimiento,
-            motivo: contexto.motivo,
-            solucionado: contexto.solucionado
-        }).then(function(insertedReport) {
-            console.log(insertedReport.dataValues)
-        })
+        let motivo = ""
+        let solucionado = true
+        SendReport(cliente, contrato, requerimiento, motivo, solucionado)
     }
     async function ConsultarDeuda(agent) {
         try {
             let contexto = agent.context.get('cliente').parameters
-                //    let contexto2 = agent.context.get('cliente').parameters
             let contrato = contexto.contrato
             let cliente = contexto.cliente
-            console.log(contrato.contrato_id)
+            let requerimiento = "Consulta de Deuda"
             let factura;
-            //  let cliente = contexto2.cliente
             factura = await facturas.findAll({
                 raw: true,
                 where: { contrato_id: contrato.contrato_id, estado: true }
@@ -871,18 +836,9 @@ app.post('/webhook', express.json(), function(req, res) {
                 total = parseFloat(total) + (parseFloat(factura.subtotal) * parseFloat(factura.iva)) - parseFloat(factura.descuento);
             });
             agent.add(`Su deuda total es de:  ${total.toFixed(2)}`);
-            let requerimiento = "Consulta de deuda";
             let motivo = "Pagar deuda";
             let solucionado = true;
-            await reportes.create({
-                cliente_id: cliente.cliente_id,
-                contrato_id: contrato.contrato_id,
-                requerimiento: requerimiento,
-                motivo: motivo,
-                solucionado: solucionado
-            }).then(function(insertedReport) {
-                console.log(insertedReport.dataValues)
-            })
+            SendReport(cliente, contrato, requerimiento, motivo, solucionado)
 
         } catch (e) {
             console.log(e)
@@ -900,6 +856,17 @@ app.post('/webhook', express.json(), function(req, res) {
         agent.setContext({ 'name': 'preguntar', 'lifespan': '1' });
     }
 
+    async function SendReport(cliente, contrato, requerimiento, motivo, solucionado) {
+        await reportes.create({
+            cliente_id: cliente.cliente_id,
+            contrato_id: contrato.contrato_id,
+            requerimiento: requerimiento,
+            motivo: motivo,
+            solucionado: solucionado
+        }).then(function(insertedReport) {
+            console.log(insertedReport.dataValues)
+        })
+    }
 
     async function EscalaroFinalizar(agent) {
         let solucionado;
@@ -1009,15 +976,7 @@ app.post('/webhook', express.json(), function(req, res) {
         }
     }
     async function Finalizarno(agent) {
-        await reportes.create({
-            cliente_id: cliente.cliente_id,
-            contrato_id: contrato.contrato_id,
-            requerimiento: requerimiento,
-            motivo: motivo,
-            solucionado: solucionado
-        }).then(function(insertedReport) {
-            console.log(insertedReport.dataValues)
-        })
+
         agent.add("Por favor indiqueme su requerimiento")
     }
 
