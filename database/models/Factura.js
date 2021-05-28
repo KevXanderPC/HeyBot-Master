@@ -1,4 +1,4 @@
-const { Model, DataTypes } = require('sequelize');
+/* const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
     class Factura extends Model {
         static associate({ contratos }) {
@@ -49,13 +49,7 @@ module.exports = (sequelize, DataTypes) => {
                 return moment(this.getDataValue('fecha')).format('DD/MM/YYYY h:mm:ss');
             }
         }
-        /*updatedAt: {
-            type: DataTypes.DATE,
-            defaultValue: sequelize.literal("NOW()"),
-            get() {
-                return moment(this.getDataValue('updatedAt')).format('DD/MM/YYYY h:mm:ss');
-            }
-        }*/
+        
     }, {
         sequelize,
         timestamps: false,
@@ -64,13 +58,13 @@ module.exports = (sequelize, DataTypes) => {
         modelName: 'facturas'
     });
     return Factura;
-}
+} */
 
 const Sequelize = require('sequelize');
 const db = require('../config/db');
 const Contrato = require('../models/Contrato');
 
-const Factura = db.define('', {
+const Factura = db.define('facturas',{
     factura_id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -101,18 +95,16 @@ const Factura = db.define('', {
     descripcion: {
         type: Sequelize.STRING,
     },
-    fecha: {
-        type: "TIMESTAMP",
-        defaultValue: Sequelize.literal("NOW()"),
-        allowNull: false,
-        //defaultValue: DataTypes.literal("NOW()")
-        //note here this is the guy that you are looking for                   
-        get() {
-            return moment(this.getDataValue('fecha')).format('DD/MM/YYYY h:mm:ss');
-        }
+    fechacreacion: {
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.NOW
     }
 })
 
-Factura.belongsTo(Contrato);
+Factura.belongsTo(Contrato, {
+    foreignKey: {
+      name: 'contrato_id'
+    }
+  })
 
 module.exports = Factura;

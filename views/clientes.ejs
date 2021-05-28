@@ -35,6 +35,7 @@
                         <strong>Tablas de clientes </strong>
                     </h5>
                 </div> <!-- /.card-body -->
+                <% primer_array =[] %>
                 <% if (clientes.length> 0) {%>
                 <div class="row table-responsive">
                     <div class="col-12 mx-auto ">
@@ -53,7 +54,7 @@
                             </thead>
                             <% clientes.forEach(cliente=> {%>
                             <tbody>
-                                
+                                <% primer_array.push(clientes) %>
                                 <tr >
                                     <th scope="row">
                                         <%= cliente.cliente_id %>
@@ -233,5 +234,25 @@
             </div>
             <!-- /.modal-dialog -->
         </div>
+
+        <!--  -->
+        <table id="example" class="table table-striped" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Position</th>
+                    <th>Office</th>
+                    <th>Age</th>
+                </tr>
+            </thead>
+            <tbody>
+               
+            </tbody>
+        </table>
+        <!--  -->
+
     </section>
+
+    
 </div>
+

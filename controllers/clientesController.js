@@ -6,7 +6,12 @@ exports.listadoClientes= async ( req, res )=>{
     res.render('clientes',{
         nombrePagina: 'Clientes',
         clientes
-    })
+    });
+};
+
+exports.listadoClientes1= async ( req, res )=>{
+    const clientes = await User.findAll({});
+    res.send({ data: clientes });
 };
 
 exports.nuevoCliente= async (req,res,) =>{

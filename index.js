@@ -34,24 +34,30 @@ const db = require('./database/config/db');
 require('./database/models/Login');
 const clientes = require('./database/models/User');
 const contratos = require('./database/models/Contrato');
-const planes = require('./database/models/Plan');
-const antenas = require('./database/models/Antena');
-const cajas = require('./database/models/Fibra');
-const equipos = require('./database/models/Equipo');
-const reportes = require('./database/models/Reporte');
-const tickets = require('./database/models/Ticket');
-const facturas = require('./database/models/Factura');
-//database
+const Planes = require('./database/models/Plan');
+const Antena = require('./database/models/Antena');
+const Caja = require('./database/models/Fibra');
+const Equipos = require('./database/models/Equipo');
+const Reportes = require('./database/models/Reporte');
+const Tickets = require('./database/models/Ticket');
+const Facturas = require('./database/models/Factura');
 db.sync()
     .then(() => console.log('Conectado al servidor'))
     .catch(error => console.log(error));
 
+/* Variables de desarrollo */
+require('dotenv').config({ path: 'variables.env' })
+
+/* app.use("/api", apiRouter);
+app.use("/register", registerRouter); */
+
 //setting 
-var PORT = process.env.PORT || 3000;
-var maybe_port = process.env.PORT || 3000;
+
+/* var PORT = process.env.PORT || 8000; */
+/* var maybe_port = process.env.PORT || 8000;
 if (typeof maybe_port === "number") {
     port = maybe_port;
-}
+} */
 process.env.DEBUG = 'dialogflow:debug';
 
 //variables
@@ -59,6 +65,7 @@ const timeZone = 'Ecuador/Quito';
 const timeZoneOffset = '-05:00';
 
 //webhook
+
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));

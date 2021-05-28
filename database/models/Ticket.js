@@ -49,7 +49,6 @@ module.exports = (sequelize, DataTypes) => {
 const Sequelize = require('sequelize');
 const db = require('../config/db');
 const Contrato = require('../models/Contrato');
-const moment = require('moment')
 
 const Ticket = db.define('ticket',{
     ticket_id: {

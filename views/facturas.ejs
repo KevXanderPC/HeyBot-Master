@@ -4,7 +4,7 @@
       <div class="container-fluid">
         <div class="row mb-2">
           <div class="col-sm-6">
-            <h1 class="m-0 text-dark">Reportes</h1>
+            <h1 class="m-0 text-dark">Facturas</h1>
           </div><!-- /.col -->
         </div><!-- /.row -->
       </div><!-- /.container-fluid -->
@@ -20,26 +20,12 @@
                 <!-- small box -->
                 <div class="small-box bg-info">
                   <div class="inner">
-                    <h3> <%= sol_si.length %>  </h3>
+                    <h3><%= facturas.length %> </h3>
     
-                    <p>Total de Soluciones</p>
+                    <p>Total de Facturas</p>
                   </div>
                   <div class="icon">
                     <i class="far fa-check-circle"></i>
-                  </div>
-                </div>
-              </div>
-            
-              <div class="col-lg-3 col-6">
-                <!-- small box -->
-                <div class="small-box bg-danger">
-                  <div class="inner">
-                    <h3> <%= sol_no.length %>  </h3>
-    
-                    <p>Total no solucionadas</p>
-                  </div>
-                  <div class="icon">
-                    <i class="fas fa-backspace"></i>
                   </div>
                 </div>
               </div>
@@ -55,10 +41,10 @@
           <div class="card card-primary card-outline">
               <div class="card-header">
                   <h5 class="mb-0 text-center">
-                      <strong>Tabla de Reportes </strong>
+                      <strong>Tabla de Facturas </strong>
                   </h5>
               </div> <!-- /.card-body -->
-              <% if (reportes.length> 0) {%>
+              <% if (facturas.length> 0) {%>
               <div class="row table-responsive">
                   <div class="col-12 mx-auto ">
                       

@@ -73,14 +73,12 @@ const Equipo = db.define('equipo',{
         autoIncrement: true
     },
     potencia: {
-        type: Sequelize.DECIMAL,
-        allowNull: true,
-        default: null
+        type: Sequelize.INTEGER,
+        defaultValue : 0
     },
     señal: {
-        type: Sequelize.DECIMAL,
-        allowNull: true,
-        default: null
+        type: Sequelize.INTEGER,
+        defaultValue : 0
     },
     dispositivos: {
         type: Sequelize.INTEGER
