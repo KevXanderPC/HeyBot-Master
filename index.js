@@ -319,7 +319,7 @@ app.post('/webhook', express.json(), function(req, res) {
             console.log(e);
         }
 
-        if (equipo.tiempo == equipo.tiempowan) {
+        if (equipo.timeequipo == equipo.timewan) {
             let motivo = "Variación de voltaje"
             solucionado = true
             agent.add("Tiene variación de voltaje por favor cambie de tomacorriente o conecte el router a un regulador de voltaje")
@@ -915,7 +915,7 @@ app.post('/webhook', express.json(), function(req, res) {
         let fecha = ticket.fechaatencion
         let msg = `Tiene visita por ${ ticket.descripcion} programada para: ${ fecha }`
         if (fecha == null) {
-            msgf = `Su visita por ${ ticket.descripcion} esta aún en estado: Por Agendar `
+            msgf = `Su visita por ${ ticket.descripcion} esta sin fecha por el momento. En unos momentos se le asignará`
         }
         agent.add(msg)
     }
@@ -989,6 +989,7 @@ app.post('/webhook', express.json(), function(req, res) {
     intentMap.set('SLCobertura', SLCob);
     intentMap.set('SLConsumo', SLConsumo);
     intentMap.set('ServicioLento', Serviciolento);
+    intentMap.set('ServicioIntermitente', ServicioIntermitente);
     intentMap.set('SinServicio', SinServicio);
     intentMap.set('Horarios', hoursHandler);
     intentMap.set('ConsultarDeuda', ConsultarDeuda);
