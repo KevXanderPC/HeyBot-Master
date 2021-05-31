@@ -295,8 +295,12 @@ app.post('/webhook', express.json(), function(req, res) {
     async function ServicioIntermitente(agent) {
         let contexto = agent.context.get('cliente').parameters
         let contrato = contexto.contrato
-        let tiempo = ""
-        let tiempowan = ""
+        let cliente = contexto.cliente
+        let requerimiento = contexto.requerimiento
+        let motivo = contexto.motivo
+        let solucionado = contexto.solucionado
+        let plan;
+        let equipo;
         try {
             plan = await planes.findOne({
                 raw: true,
@@ -314,36 +318,24 @@ app.post('/webhook', express.json(), function(req, res) {
         } catch (e) {
             console.log(e);
         }
-        if (plan.megas !== '10') {
-            try {
-                caja = await cajas.findOne({
-                    raw: true,
-                    where: {
-                        caja_id: equipo.caja_id
-                    }
-                })
-            } catch (e) {
-                console.log(e);
-                agent.clearOutgoingContexts();
-            }
 
+        if (equipo.tiempo == equipo.tiempowan) {
+            let motivo = "Variación de voltaje"
+            solucionado = true
+            agent.add("Tiene variación de voltaje por favor cambie de tomacorriente o conecte el router a un regulador de voltaje")
+            SendReport(cliente, contrato, requerimiento, motivo, solucionado)
+            agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
         } else {
-            try {
-                equipo = await equipos.findOne({
-                    raw: true,
-                    where: {
-                        contrato_id: contrato.contrato_id
-                    }
-                })
-
-
-            } catch (e) {
-                console.log(e);
-                agent.clearOutgoingContexts();
-            }
+            motivo = "Perdida de sesión wan"
+            solucionado = false
+            agent.add("Se detecto un problema en el equipo. Por favor llame al 1700 49-439")
+            SendReport(cliente, contrato, requerimiento, motivo, solucionado)
+            agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
         }
-
     }
+
+
+
 
     async function Serviciolento(agent) {
         let contexto = agent.context.get('cliente').parameters
@@ -982,7 +974,6 @@ app.post('/webhook', express.json(), function(req, res) {
             }
         });
         agent.setContext({ 'name': 'comprobar servicio', 'lifespan': '1' });
-
     }
 
     let intentMap = new Map();
