@@ -148,7 +148,7 @@ app.post('/webhook', express.json(), function(req, res) {
             var possibleResponse = [
                 `El cliente ${cliente.nombre} ¿correcto?`,
                 `Confírmeme que se trata del cliente ${cliente.nombre}`,
-                `Con el cliente ${cliente.nombre} ¿cierto? `
+                `¿Con el cliente ${cliente.nombre}?`
             ];
             var pick = Math.floor(Math.random() * possibleResponse.length);
             var response = possibleResponse[pick];
@@ -189,6 +189,7 @@ app.post('/webhook', express.json(), function(req, res) {
     async function ValidarContrato(agent) {
         let contexto = agent.context.get('cliente').parameters
         let cliente = contexto.cliente;
+        let requerimiento = contexto.requerimiento
         let contrato;
         try {
             contrato = await contratos.findAll({
@@ -238,7 +239,9 @@ app.post('/webhook', express.json(), function(req, res) {
                             'contrato': contrato
                         }
                     });
+
                     PedirRequerimiento(agent);
+
                 }
             }
         } catch (err) {
@@ -296,7 +299,7 @@ app.post('/webhook', express.json(), function(req, res) {
         let contexto = agent.context.get('cliente').parameters
         let contrato = contexto.contrato
         let cliente = contexto.cliente
-        let requerimiento = contexto.requerimiento
+        let requerimiento = "Servicio Intermitente"
         let motivo = contexto.motivo
         let solucionado = contexto.solucionado
         let plan;
@@ -322,13 +325,13 @@ app.post('/webhook', express.json(), function(req, res) {
         if (equipo.timeequipo == equipo.timewan) {
             let motivo = "Variación de voltaje"
             solucionado = true
-            agent.add("Tiene variación de voltaje por favor cambie de tomacorriente o conecte el router a un regulador de voltaje")
+            agent.add("Lo mas probable es que tenga variación de voltaje por favor compruebe cambiando de tomacorriente o conecte el router a un regulador de voltaje")
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
             agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
         } else {
             motivo = "Perdida de sesión wan"
             solucionado = false
-            agent.add("Se detecto un problema en el equipo. Por favor llame al 1700 49-439")
+            agent.add("Se detecto un problema en el equipo. Por favor llame al 1700 439-439 para solución de su caso")
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
             agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
         }
@@ -376,12 +379,10 @@ app.post('/webhook', express.json(), function(req, res) {
                 })
                 atenuacion = caja.potencia - equipo.potencia
                 if (atenuacion >= 5) {
-                    agent.add('Tiene la potencia del equipo elevada. Contactese a este numero para pedir ticket de atención')
+                    agent.add('Tiene la potencia del equipo elevada y necesita visita técnica. Escriba ok para crear su ticket de atención')
                     motivo = "Potencia Elevada";
-                    solucionado = true
-                    SendReport(cliente, contrato, requerimiento, motivo, solucionado)
                     agent.context.set({
-                        name: 'finalizar',
+                        name: 'escalar',
                         lifespan: 1,
                     });
                 } else {
@@ -402,12 +403,10 @@ app.post('/webhook', express.json(), function(req, res) {
         } else {
             try {
                 if (equipo.señal <= -68) {
-                    agent.add('Tiene parámetros deficientes en la antena. Contáctese al 1700 439-439')
-                    motivo = "Parámetros deficientes";
-                    solucionado = true
-                    SendReport(cliente, contrato, requerimiento, motivo, solucionado)
+                    agent.add('Tiene parámetros deficientes en la antena y necesita visita técnica. Escriba ok para crear su ticket de atención')
+                    motivo = "Parámetros Deficientes";
                     agent.context.set({
-                        name: 'finalizar',
+                        name: 'escalar',
                         lifespan: 1,
                     });
                 } else {
@@ -432,6 +431,8 @@ app.post('/webhook', express.json(), function(req, res) {
                 'requerimiento': 'Servicio Lento',
                 'equipo': equipo,
                 'plan': plan,
+                'motivo': motivo,
+                'requeimiento': requerimiento
             }
         });
 
@@ -531,7 +532,7 @@ app.post('/webhook', express.json(), function(req, res) {
 
         } else {
             let motivo = "Cobertura"
-            agent.add("El equipo le cubre máximo 10 metros cuadrados, acérquese más a su equipo por favor")
+            agent.add("El equipo le cubre máximo 10 metros cuadrados, acérquese más a su equipo y compruebe por favor")
             agent.setContext({ name: 'comprobarservicio', lifespan: '1' })
         }
         agent.setContext({
@@ -544,9 +545,6 @@ app.post('/webhook', express.json(), function(req, res) {
 
     }
 
-    function Cobertura(agent) {
-
-    }
 
     async function SinServicio(agent) {
         let contexto = agent.context.get('cliente').parameters
@@ -592,19 +590,17 @@ app.post('/webhook', express.json(), function(req, res) {
 
                     if (antena.estado == true) {
                         if (equipo.señal <= -68) {
-                            agent.add('Tiene parámetros deficientes en la antena. Contáctese al 1700 439-439')
+                            agent.add('Tiene parámetros deficientes en la antena. Escriba ok para crear su ticket de atención')
                             motivo = "Parámetros deficientes";
-                            solucionado = true
-                            SendReport(cliente, contrato, requerimiento, motivo, solucionado)
                             agent.context.set({
-                                name: 'finalizar',
+                                name: 'escalar',
                                 lifespan: 1,
                             });
                         } else if (equipo.estado == true) {
                             motivo = "Router Inhibido"
                             agent.add('Por favor pruebe con algun otro dispositivo o reinicie el equipo')
                             agent.context.set({
-                                name: 'Comprobarservicio',
+                                name: 'comprobarservicio',
                                 lifespan: 1,
                             });
                             agent.context.delete("SinServicio-followup");
@@ -654,7 +650,7 @@ app.post('/webhook', express.json(), function(req, res) {
                             agent.add("¿Presenta una luz roja encendida en el equipo?");
                         } else if (equipo.estado == true) {
                             motivo = "Equipo Inhibido"
-                            agent.add('Por favor pruebe con otro dispositivo o reinicie el router')
+                            agent.add('Por favor compruebe con otro dispositivo o reinicie el router')
                             agent.context.set({
                                 name: 'Comprobarservicio',
                                 lifespan: 15,
@@ -730,6 +726,16 @@ app.post('/webhook', express.json(), function(req, res) {
         });
     }
 
+    function Ambiguo(agent) {
+        let ambiguo = agent.parameters.ambiguo;
+
+        if (ambiguo != null) {
+            agent.add(`¿ ${ambiguo} en que sentido? ¿Esta lento, intermitente o no tiene servicio?`)
+        } else {
+            agent.add("¿Esta lento, intermitente o no tiene servicio?")
+        }
+    }
+
     function LuzRoja(agent) {
         let motivo = "Luz Roja"
         agent.add("Por favor desconecte el equipo de la corriente y desconecte el cable amarillo atras del router. Luego de unos segundos reconectelos y verifique si desaparece la luz roja")
@@ -756,8 +762,23 @@ app.post('/webhook', express.json(), function(req, res) {
     }
 
     function fallback(agent) {
-        agent.add(`Disculpe tengo que escalar su caso. Para mas información contáctese al 1700 439-439`);
+        agent.add(`Escriba Menu para conocer mis funciones o contáctese al 1700 439-439 para más información`);
     }
+
+    function Menu(agent) {
+        agent.setContext({
+            'name': 'validarcliente',
+            'lifespan': '1',
+        });
+        agent.add(`1.-Servicio Lento`);
+        agent.add(`2.-Servicio Intermitente`);
+        agent.add(`3.-Sin Servicio`);
+        agent.add(`4.-Consulta de ticket`);
+        agent.add(`5.-Consulta de deuda pendiente`);
+        agent.add(`Escriba su numero de cédula para comenzar`);
+    }
+
+
 
     function currentlyOpen() {
         // Get current datetime with proper timezone
@@ -802,7 +823,9 @@ app.post('/webhook', express.json(), function(req, res) {
             factura.forEach(factura => {
                 total = parseFloat(total) + (parseFloat(factura.subtotal) * parseFloat(factura.iva)) - parseFloat(factura.descuento);
             });
-            agent.add(`Su deuda total es de:  ${total.toFixed(2)}`);
+            agent.add(`
+                            Su deuda total es de: $ { total.toFixed(2) }
+                            `);
             let solucionado = true;
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
             agent.add('¿Algo mas en lo que pueda servirle?');
@@ -856,7 +879,7 @@ app.post('/webhook', express.json(), function(req, res) {
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
             agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
             console.log(motivo)
-            if (motivo == "Luz Roja" | motivo == "Parámetros Deficientes" | motivo == "Router Reset") {
+            if (motivo == "Luz Roja" | motivo == "Parámetros Deficientes" | motivo == "Router Reset" | motivo == "Potencia Elevada") {
                 CrearTicket(motivo, cliente, contrato)
                 msg = "Se creó un ticket para su problema. El tiempo de atención estimado es de 24 horas laborables"
             }
@@ -913,9 +936,9 @@ app.post('/webhook', express.json(), function(req, res) {
 
     function ticketsinfecha(ticket, agent) {
         let fecha = ticket.fechaatencion
-        let msg = `Tiene visita por ${ ticket.descripcion} programada para: ${ fecha }`
+        let msg = `Tiene visita por ${ ticket.descripcion } programada para: ${ fecha }`
         if (fecha == null) {
-            msgf = `Su visita por ${ ticket.descripcion} esta sin fecha por el momento. En unos momentos se le asignará`
+            msg = `Su visita por ${ ticket.descripcion } esta sin fecha por el momento. En pocos momentos se le asignará su fecha y hora de atención `
         }
         agent.add(msg)
     }
@@ -923,7 +946,8 @@ app.post('/webhook', express.json(), function(req, res) {
         let contexto = agent.context.get('cliente').parameters
         let cliente = contexto.cliente
         let contrato = contexto.contrato
-        let requerimiento = "Cambio de clave"
+        let requerimiento = contexto.requerimiento
+        if (requerimiento == "Servicio Lento") {} else { let requerimiento = "Cambio de clave" }
         let motivo = contexto.motivo
         let solucionado = contexto.solucionado
         let nuevaclave = ""
@@ -942,15 +966,24 @@ app.post('/webhook', express.json(), function(req, res) {
                 console.log(e)
             }
             agent.add('Tu contraseña ha sido cambiada con éxito a ' + nuevaclave);
-            solucionado = true;
-            SendReport(cliente, contrato, requerimiento, motivo, solucionado)
-            agent.add("¿Algo mas en lo que le pueda servir?")
-            agent.setContext({ 'name': 'preguntar', 'lifespan': '1' });
+            console.log(requerimiento)
+            if (requerimiento != "Servicio Lento") {
+                solucionado = true;
+                SendReport(cliente, contrato, requerimiento, motivo, solucionado)
+                agent.add("¿Algo mas en lo que le pueda servir?")
+                agent.setContext({ 'name': 'preguntar', 'lifespan': '1' });
+            } else {
+                agent.setContext({
+                    name: 'finalizar',
+                    lifespan: '1',
+                });
+                agent.add("Compruebe el servicio con su nueva clave por favor")
+            }
+
         } else {
             agent.add('Por favor ingrese una clave con al menos 8 digitos, una letra minuscula, una mayuscula y un caracter especial');
             agent.setContext({ 'name': 'cambioclave', 'lifespan': '1' });
         }
-
     }
 
     async function Finalizarsi(agent) {
@@ -973,7 +1006,8 @@ app.post('/webhook', express.json(), function(req, res) {
                 'motivo': motivo
             }
         });
-        agent.setContext({ 'name': 'comprobar servicio', 'lifespan': '1' });
+        agent.setContext({ 'name': 'comprobarservicio', 'lifespan': '1' });
+        agent.add("Compruebe el servicio por favor")
     }
 
     let intentMap = new Map();
@@ -987,6 +1021,7 @@ app.post('/webhook', express.json(), function(req, res) {
     intentMap.set('ProblemasTV.general', ProblemasTVgeneral);
     intentMap.set('SLDisp', SLDisp);
     intentMap.set('SLCobertura', SLCob);
+    intentMap.set('Menu', Menu);
     intentMap.set('SLConsumo', SLConsumo);
     intentMap.set('ServicioLento', Serviciolento);
     intentMap.set('ServicioIntermitente', ServicioIntermitente);
@@ -1009,9 +1044,10 @@ app.post('/webhook', express.json(), function(req, res) {
 
 })
 
+
 //arrancamos el servidor
 app.listen(PORT, () => {
     console.log(`
-                        Our app is running on port $ { PORT }
-                        `);
+                            Our app is running on port $ { PORT }
+                            `);
 })
