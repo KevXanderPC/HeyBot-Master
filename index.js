@@ -25,7 +25,7 @@ app.use(cors());
 
 /* const apiRouter = require("./routes/apiRouter");
 const registerRouter = require("./routes/registerRouter"); */
-const { on } = require('nodemon');
+const { on, reset } = require('nodemon');
 const { convert } = require('actions-on-google/dist/service/actionssdk');
 
 const db = require('./database/config/db');
@@ -394,9 +394,6 @@ app.post('/webhook', express.json(), function(req, res) {
         }
     }
 
-
-
-
     async function Serviciolento(agent) {
         let contexto = agent.context.get('cliente').parameters
         let contrato = contexto.contrato
@@ -405,7 +402,6 @@ app.post('/webhook', express.json(), function(req, res) {
         let equipo;
         let caja;
         let motivo;
-        let solucionado;
         let requerimiento = 'Servicio Lento'
         try {
             plan = await planes.findOne({
@@ -436,7 +432,7 @@ app.post('/webhook', express.json(), function(req, res) {
                 })
                 atenuacion = caja.potencia - equipo.potencia
                 if (atenuacion >= 5) {
-                    agent.add('Tiene la potencia del equipo elevada y necesita visita técnica. Escriba ok para crear su ticket de atención')
+                    agent.add('Tiene la potencia del equipo elevada y necesita visita técnica. Escriba OK para crear su ticket de atención')
                     motivo = "Potencia Elevada";
                     agent.context.set({
                         name: 'escalar',
@@ -614,113 +610,84 @@ app.post('/webhook', express.json(), function(req, res) {
         let motivo;
         let solucionado;
         let requerimiento = "Sin Servicio"
-        try {
-            plan = await planes.findOne({
-                raw: true,
-                attributes: ['megas'],
-                where: {
-                    plan_id: contrato.plan_id
+
+        switch (contrato.estado) {
+            case true:
+                try {
+                    plan = await planes.findOne({
+                        raw: true,
+                        attributes: ['megas'],
+                        where: {
+                            plan_id: contrato.plan_id
+                        }
+                    }).then(console.log(plan));
+                    equipo = await equipos.findOne({
+                        raw: true,
+                        where: {
+                            contrato_id: contrato.contrato_id
+                        }
+                    })
+                } catch (e) {
+                    console.log(e)
                 }
-            }).then(console.log(plan))
-        } catch (e) {
-            console.log(e)
-        }
-        if (plan.megas == '10') {
-            try {
-
-                equipo = await equipos.findOne({
-                    raw: true,
-                    where: {
-                        contrato_id: contrato.contrato_id
+                if (plan.megas == '10') {
+                    try {
+                        antena = await antenas.findOne({
+                            raw: true,
+                            attributes: ['estado'],
+                            where: { antena_id: equipo.antena_id }
+                        }).then(console.log(antena))
+                    } catch (e) {
+                        console.log(e)
                     }
-                }).then(console.log(equipo));
-                antena = await antenas.findOne({
-                    raw: true,
-                    attributes: ['estado'],
-                    where: { antena_id: equipo.antena_id }
-                }).then(console.log(antena))
-            } catch (e) {
-                console.log(e)
-            }
-            switch (contrato.estado) {
-                case true:
-
                     if (antena.estado == true) {
-                        if (equipo.señal <= -68) {
-                            agent.add('Tiene parámetros deficientes en la antena. Escriba ok para crear su ticket de atención')
-                            motivo = "Parámetros deficientes";
+                        if (equipo.estado == true) {
+                            if (equipo.señal <= -68) {
+                                agent.add('Tiene parámetros deficientes en la antena. Escriba ok para crear su ticket de atención')
+                                motivo = "Parámetros deficientes";
+                                agent.context.set({
+                                    name: 'escalar',
+                                    lifespan: 1,
+                                });
+                            }
+                        } else {
+                            motivo = "inhibido"
+                            agent.add('¿Disculpe, tiene los equipos encendido?')
                             agent.context.set({
-                                name: 'escalar',
-                                lifespan: 1,
-                            });
-                        } else if (equipo.estado == true) {
-                            motivo = "Router Inhibido"
-                            agent.add('Por favor pruebe con algun otro dispositivo o reinicie el equipo')
-                            agent.context.set({
-                                name: 'comprobarservicio',
+                                name: 'equiposapagados',
                                 lifespan: 1,
                             });
                             agent.context.delete("SinServicio-followup");
-                        } else {
-                            agent.setContext({ 'name': 'Reset.followup', 'lifespan': '1' });
-                            agent.add("¿Se ha cambiado el nombre de su red wifi?")
                         }
-
                     } else {
                         agent.add('Mil disculpas estimad@ hay un problema a nivel general. Se resolverá en brevedad posible')
                         let motivo = "Mantenimiento"
                         let solucionado = true
                         SendReport(cliente, contrato, requerimiento, motivo, solucionado)
                     }
-                    break;
-                default:
-                    agent.add("Lo sentimos al momento su contrato esta suspendido. Contáctese al 1700 439-439")
-                    motivo = "Suspendido"
-                    solucionado = true
-                    agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
-                    SendReport(cliente, contrato, requerimiento, motivo, solucionado)
-                    break;
-            }
-
-        } else {
-            try {
-                equipo = await equipos.findOne({
-                        raw: true,
-                        where: {
-                            contrato_id: contrato.contrato_id
-                        }
-                    }),
-                    caja = await cajas.findOne({
-                        raw: true,
-                        attributes: ['estado', 'potencia'],
-                        where: { caja_id: equipo.caja_id }
-                    })
-            } catch (e) {
-                console.log(e)
-                agent.clearOutgoingContexts();
-            }
-            switch (contrato.estado) {
-                case true:
+                } else {
+                    try {
+                        caja = await cajas.findOne({
+                            raw: true,
+                            attributes: ['estado', 'potencia'],
+                            where: { caja_id: equipo.caja_id }
+                        })
+                    } catch (e) {
+                        console.log(e)
+                        agent.clearOutgoingContexts();
+                    }
                     if (caja.estado == true) {
-                        if (equipo.potencia == 0) {
-                            agent.add("¿Presenta una luz roja encendida en el equipo?");
-                        } else if (equipo.estado == true) {
-                            motivo = "Equipo Inhibido"
-                            agent.add('Por favor compruebe con otro dispositivo o reinicie el router')
-                            agent.context.set({
-                                name: 'Comprobarservicio',
-                                lifespan: 15,
-                            });
-                            agent.context.delete("SinServicio-followup");
-                        } else if (equipo.estado == false) {
-                            agent.add("Lo sentimos al momento su contrato esta suspendido. Comuníquese al 1700 439-439")
-                            motivo = "Suspendido"
-                            solucionado = true;
-                            SendReport(cliente, contrato, requerimiento, motivo, solucionado)
-                            agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
+                        if (equipo.estado == true) {
+                            if (equipo.potencia == 0) {
+                                agent.add("¿Presenta una luz roja encendida en el equipo?");
+                                agent.setContext({ 'name': 'luzroja', 'lifespan': '1' });
+                            } else {
+
+                            }
                         } else {
-                            agent.setContext({ 'name': 'Reset-followup', 'lifespan': '1' });
                             agent.add("¿Se le ha cambiado el nombre de su red wifi?")
+                            motivo = "reset"
+                            agent.setContext({ 'name': 'Reset-followup', 'lifespan': '1' });
                         }
                     } else {
                         agent.add('Mil disculpas estimad@ hay un problema a nivel general. Se resolverá en brevedad posible')
@@ -729,18 +696,25 @@ app.post('/webhook', express.json(), function(req, res) {
                         agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
                         SendReport(cliente, contrato, requerimiento, motivo, solucionado)
                     }
-            }
+                }
+                break;
+            default:
+                agent.add("Lo sentimos al momento su contrato esta suspendido. Contáctese al 1700 439-439 para más información")
+                motivo = "Suspendido"
+                solucionado = true
+                agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
+                SendReport(cliente, contrato, requerimiento, motivo, solucionado)
+                break;
         }
         agent.setContext({
             name: 'cliente',
             lifespan: '15',
             parameters: {
                 'motivo': motivo,
-                'requerimiento': requerimiento
+                'requerimiento': requerimiento,
+                'megas': plan.megas
             }
         });
-
-
     }
 
     async function Preguntar(agent) {
@@ -766,17 +740,6 @@ app.post('/webhook', express.json(), function(req, res) {
 
     }
 
-    function SSluzrojasi(agent) {
-        let motivo = "Luz Roja";
-        agent.add("Por favor desconecte el equipo de la corriente y desconecte el cable amarillo atras del router. Luego de unos segundos reconectelos y verifique si desaparece la luz roja")
-        agent.setContext({
-            name: 'cliente',
-            lifespan: '5',
-            parameters: {
-                'motivo': motivo
-            }
-        });
-    }
 
     function Ambiguo(agent) {
         let ambiguo = agent.parameters.ambiguo;
@@ -789,29 +752,24 @@ app.post('/webhook', express.json(), function(req, res) {
     }
 
     function LuzRoja(agent) {
-        let motivo = "Luz Roja"
-        agent.add("Por favor desconecte el equipo de la corriente y desconecte el cable amarillo atras del router. Luego de unos segundos reconectelos y verifique si desaparece la luz roja")
-        agent.setContext({
-            name: 'cliente',
-            lifespan: '5',
-            parameters: {
-                'motivo': motivo
-            }
-        });
+        let respuesta = agent.parameters
+        if (respuesta.Positivo) {
+            let motivo = "Luz Roja"
+            agent.add("Por favor desconecte el equipo de la corriente y desconecte el cable amarillo atras del router. Luego de unos segundos reconectelos y verifique si desaparece la luz roja")
+            agent.setContext({
+                name: 'cliente',
+                lifespan: '5',
+                parameters: {
+                    'motivo': motivo
+                }
+            });
+        } else {
+            agent.add("Por favor desconecte el equipo de la corriente y luego de 5 segundos reconectelo nuevamente. Escriba ok cuando las luces del equipo esten todas encendidas")
+            agent.setContext({ 'name': 'comprobarservicio', 'lifespan': '1' });
+        }
     }
 
-    function SSluzrojano(agent) {
-        let motivo = "Router Inhibido"
-        agent.add("Por favor reinicie su router o desconectelo y vuelvalo a conectar de la corriente")
-        agent.setContext({ 'name': 'reset', 'lifespan': '1' });
-        agent.setContext({
-            'name': 'cliente',
-            'lifespan': '10',
-            'parameters': {
-                'motivo': motivo
-            }
-        });
-    }
+
 
     function fallback(agent) {
 
@@ -931,25 +889,36 @@ app.post('/webhook', express.json(), function(req, res) {
         } else
         if (resp.Problemas || resp.Positivo) {
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
-            agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
-            console.log(motivo)
-            if (motivo == "Luz Roja" | motivo == "Parámetros Deficientes" | motivo == "Router Reset" | motivo == "Potencia Elevada") {
-                CrearTicket(motivo, cliente, contrato)
-                msg = "Se creó un ticket para su problema. El tiempo de atención estimado es de 24 horas laborables"
+            switch (motivo) {
+                case "inhibido":
+                    if (contrato.plan_id == 1) {
+                        agent.add("Al parecer se le ha resetiado la antena. Escriba OK para agendarle una visita técnica")
+                        agent.context.set({
+                            name: 'escalar',
+                            lifespan: 1,
+                        });
+                    } else {
+                        agent.add("Puede que tenga problemas de acceso. Contáctese al 1700 439-439 para gestionar su caso")
+                    }
+                    break;
+                case "reset":
+                    agent.add("Puede que la aplicación no sea compatible con el equipo.Contáctese al 1700 439-439 para gestionar su caso")
+                    break;
+                default:
+                    break;
             }
-            agent.add(msg)
+            agent.add(msg);
         } else
         if (query == "ok") {
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
             agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
-            console.log(motivo)
-            if (motivo == "Luz Roja" | motivo == "Parámetros Deficientes" | motivo == "Router Reset" | motivo == "Potencia Elevada") {
+            if (motivo == "Luz Roja" | motivo == "Parámetros Deficientes" | motivo == "Reset" | motivo == "Potencia Elevada") {
                 CrearTicket(motivo, cliente, contrato)
                 msg = "Se creó un ticket para su problema. El tiempo de atención estimado es de 24 horas laborables"
             }
             agent.add(msg)
         } else {
-            agent.add("Disculpe no le entendí.Respondame si o no");
+            agent.add("Disculpe no le entendí.Respondame con un: 'si' o con un 'no'");
             agent.setContext({ 'name': 'escalar', 'lifespan': '1' });
         }
 
@@ -1009,10 +978,12 @@ app.post('/webhook', express.json(), function(req, res) {
     function ParametrosDeficientes(agent) {
         let resp = agent.parameters
         if (resp.positivo) {
-            agent.add("A raíz de eso la antena dejó de captar buena señal. Se agendará un ticket de atención, por favor presione ok para continuar")
+            agent.add("El movimiento de la antena ocasionó que dejara de captar buena señal. Se agendará un ticket para visita técnica, por favor escriba ok para continuar")
+            agent.setContext({ 'name': 'escalar', 'lifespan': '1' });
 
         } else {
-            agent.add("")
+            agent.add("Puede que se haya movido por el viento. Se agendará un ticket para visita técnica, por favor escriba ok para continuar")
+            agent.setContext({ 'name': 'escalar', 'lifespan': '1' });
         }
     }
 
@@ -1069,11 +1040,10 @@ app.post('/webhook', express.json(), function(req, res) {
         }
     }
     async function Resetno(agent) {
-        agent.add("Por favor reincicie su router o descoenctalo y vuelvalo a conectar a la corriente")
-    }
-    async function Reset(agent) {
-        let motivo = "Router Reset"
-        agent.add("Por favor utilize la aplicación de Hey! para configurar su router reset")
+        let motivo = "inhibido"
+        agent.add('Por favor desconect el equipo de la corriente y luego de 5 segundos vuelva a encenderlo. Escriba OK para continuar')
+        agent.context.delete("SinServicio-followup");
+        agent.setContext({ 'name': 'comprobarservicio', 'lifespan': '1' });
         agent.setContext({
             name: 'cliente',
             lifespan: '5',
@@ -1081,8 +1051,18 @@ app.post('/webhook', express.json(), function(req, res) {
                 'motivo': motivo
             }
         });
+    }
+    async function Reset(agent) {
+        let motivo = "reset"
+        agent.add("Tiene el equipo desconfigurado, por favor intente utilizar la aplicación de Hey! para configurar su router desconfigurado")
+        agent.setContext({
+            name: 'cliente',
+            lifespan: '5',
+            parameters: {
+                'motivo': motivo,
+            }
+        });
         agent.setContext({ 'name': 'comprobarservicio', 'lifespan': '1' });
-        agent.add("Compruebe el servicio por favor")
     }
 
     let intentMap = new Map();
@@ -1109,8 +1089,6 @@ app.post('/webhook', express.json(), function(req, res) {
     intentMap.set('Requerimiento.ClaveCambiada', ClaveCambiada);
     intentMap.set('Requerimiento.ConsultaTicket', ConsultaTicket);
     intentMap.set('SinServicio.LuzRoja', LuzRoja);
-    intentMap.set('SinServicio.luzrojasi', SSluzrojasi);
-    intentMap.set('SinServicio.luzrojano', SSluzrojano);
     intentMap.set('Finalizar', Finalizar);
     intentMap.set('Reset - no', Resetno);
     intentMap.set('Reset - yes', Reset);
