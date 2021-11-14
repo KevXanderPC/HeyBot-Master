@@ -121,6 +121,7 @@ app.post('/webhook', express.json(), function(req, res) {
         agent.context.delete("Saludo-followup");
         const cedula = agent.parameters["number-sequence"]
         try {
+
             cliente = await clientes.findOne({ where: { cedula } }).then(console.log(cliente))
 
         } catch (err) {
@@ -229,7 +230,7 @@ app.post('/webhook', express.json(), function(req, res) {
                         }
                     });
                     agent.context.set({
-                        name: 'clientevalidado',
+                        name: 'especificarcontrato',
                         lifespan: 1
                     });
                     agent.context.delete("vcsifu");
@@ -243,10 +244,13 @@ app.post('/webhook', express.json(), function(req, res) {
                         parameters: {
                             'contrato': contrato
                         }
+
                     });
-
+                    agent.context.set({
+                        name: 'clientevalidado',
+                        lifespan: 1
+                    });
                     PedirRequerimiento(agent);
-
                 }
             }
         } catch (err) {
@@ -288,6 +292,10 @@ app.post('/webhook', express.json(), function(req, res) {
                     'contrato': contrato
                 }
             });
+            agent.context.set({
+                name: 'clientevalidado',
+                lifespan: 1
+            });
             PedirRequerimiento(agent);
         }
 
@@ -296,59 +304,65 @@ app.post('/webhook', express.json(), function(req, res) {
     async function PedirRequerimiento(agent) {
         try {
             let contexto = agent.context.get('cliente').parameters
-            let requerimiento = contexto.requeimiento
+            let requerimiento = ""
+            requerimiento = contexto.requerimiento
+            if (requerimiento == "" || requerimiento == null) {
+                agent.add(`Indíqueme su requrimiento por favor`);
+                agent.context.set({
+                    name: 'requerimiento',
+                    lifespan: 1,
+                });
+            } else {
+                switch (requerimiento) {
+                    case "Servicio Lento":
+                        Serviciolento(agent)
+                        break;
+                    case "Servicio Intermitente":
+                        ServicioIntermitente(agent)
+                        break;
+                    case "Sin Servicio":
+                        SinServicio(agent)
+                        break;
+                    case "Consulta de deuda":
+                        ConsultarDeuda(agent)
+                        break;
+                    case "Cambio de clave":
+                        agent.add("Indiqueme la nueva clave que desea ponerle a su red")
+                        agent.setContext({ 'name': 'CambioClave', 'lifespan': '1' });
+                        break;
+
+                    default:
+                        break;
+                }
+            }
         } catch (e) {
             console.log(e)
         }
-        if (requeimiento == "" || requerimiento == null) {
-            agent.add(`Indíqueme su requrimiento por favor`);
-            agent.context.set({
-                name: 'requerimiento',
-                lifespan: 1,
-            });
-        } else {
-            switch (requerimiento) {
-                case "Servicio Lento":
-                    Serviciolento(agent)
-                    break;
-                case "Servicio Intermitente":
-                    ServicioIntermitente(agent)
-                    break;
-                case "Sin Servicio":
-                    SinServicio(agent)
-                    break;
-                case "Consulta de deuda":
-                    ConsultarDeuda(agent)
-                    break;
-                case "Cambio de clave":
-                    agent.add("Indiqueme la nueva clave que desea ponerle a su red")
-                    agent.setContext({ 'name': 'CambioClave', 'lifespan': '1' });
-                    break;
 
-                default:
-                    break;
-            }
-        }
     }
 
     function Requerimientosinvalidar(agent) {
-        let requerimiento = agent.parameters.requerimiento
-        agent.add("Entiendo su requerimiento. Primero ayudeme ingresando la cédula del cliente por favor")
-        agent.context.set({
-            name: 'validarcliente',
-            lifespan: 1
-        });
-        agent.context.set({
-            name: 'VC',
-            lifespan: 1
-        });
-        agent.context.set({
-            name: 'cliente',
-            lifespan: 1,
-            parameters: {
-                requerimiento: requerimiento
-            }
-        });
+        let contexto = agent.context.get('cliente').parameters
+        let cliente = contexto.cliente
+        if (cliente == "") {
+            let requerimiento = agent.parameters.requerimiento;
+            agent.add("Entiendo su requerimiento. Primero ayudeme ingresando la cédula del cliente por favor");
+            agent.context.set({
+                name: 'validarcliente',
+                lifespan: 1
+            });
+            agent.context.set({
+                name: 'VC',
+                lifespan: 1
+            });
+            agent.context.set({
+                name: 'cliente',
+                lifespan: 1,
+                parameters: {
+                    'requerimiento': requerimiento
+                }
+            });
+        }
     }
 
 
@@ -377,22 +391,55 @@ app.post('/webhook', express.json(), function(req, res) {
                 }
             })
         } catch (e) {
-            console.log(e);
+
         }
+
+        switch (plan.megas) {
+            case 10:
+
+                break;
+
+            default:
+                try {
+                    caja = await cajas.findOne({
+                        attributes: ['potencia'],
+                        raw: true,
+                        where: {
+                            caja_id: equipo.caja_id
+                        }
+                    })
+
+                } catch (e) {
+                    console.log(e);
+                }
+                let atenuacion = caja.potencia - equipo.potencia
+                if (atenuacion >= 5) {
+                    agent.add("Tiene la potencia del equipo elevada y necesita visita técnica. Escriba 'ok' para crear su ticket de atención")
+                    motivo = "Potencia Elevada";
+                    agent.context.set({
+                        name: 'escalar',
+                        lifespan: 1,
+                    });
+
+                    break;
+                }
+        }
+
         if (equipo.timeequipo == equipo.timewan) {
             let motivo = "Variación de voltaje"
             solucionado = true
-            agent.add("Lo mas probable es que tenga variación de voltaje por favor compruebe cambiando de tomacorriente o conecte el router a un regulador de voltaje")
+            agent.add("Se detectó variación de voltaje en el equipo por favor compruebe cambiando de tomacorriente o conecte el router a un regulador de voltaje")
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
             agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
         } else {
             motivo = "Perdida de sesión wan"
             solucionado = false
-            agent.add("Se detecto un problema en el equipo. Por favor llame al 1700 439-439 para solución de su caso")
+            agent.add("Se detecto perdida de la sesión wan. Por favor llame al 1700 439-439 para una mejor revision de su caso")
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
             agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
         }
     }
+
 
     async function Serviciolento(agent) {
         let contexto = agent.context.get('cliente').parameters
@@ -430,27 +477,27 @@ app.post('/webhook', express.json(), function(req, res) {
                         caja_id: equipo.caja_id
                     }
                 })
-                atenuacion = caja.potencia - equipo.potencia
-                if (atenuacion >= 5) {
-                    agent.add('Tiene la potencia del equipo elevada y necesita visita técnica. Escriba OK para crear su ticket de atención')
-                    motivo = "Potencia Elevada";
-                    agent.context.set({
-                        name: 'escalar',
-                        lifespan: 1,
-                    });
-                } else {
-                    var possibleResponse = [
-                        "¿Tiene el servicio lento en algun dispositivo en especifico o en todos por igual?",
-                        "¿El problema es solo con un dispositivo o es con todos por igual?",
-                        '¿Tiene servicio lento en todos los dispositivoso o solo en uno de ellos?'
-                    ];
-                    var pick = Math.floor(Math.random() * possibleResponse.length);
-                    var response = possibleResponse[pick];
-                    agent.add(response);
-                }
             } catch (e) {
                 console.log(e);
                 agent.clearOutgoingContexts();
+            }
+            atenuacion = caja.potencia - equipo.potencia
+            if (atenuacion >= 5) {
+                agent.add('Tiene la potencia del equipo elevada y necesita visita técnica. Escriba OK para crear su ticket de atención')
+                motivo = "Potencia Elevada";
+                agent.context.set({
+                    name: 'escalar',
+                    lifespan: 1,
+                });
+            } else {
+                var possibleResponse = [
+                    "¿Tiene el servicio lento en algun dispositivo en especifico o en todos por igual?",
+                    "¿El problema es solo con un dispositivo o es con todos por igual?",
+                    '¿Tiene servicio lento en todos los dispositivoso o solo en uno de ellos?'
+                ];
+                var pick = Math.floor(Math.random() * possibleResponse.length);
+                var response = possibleResponse[pick];
+                agent.add(response);
             }
 
         } else {
@@ -485,7 +532,7 @@ app.post('/webhook', express.json(), function(req, res) {
                 'equipo': equipo,
                 'plan': plan,
                 'motivo': motivo,
-                'requeimiento': requerimiento
+                'requerimiento': requerimiento
             }
         });
 
@@ -652,7 +699,7 @@ app.post('/webhook', express.json(), function(req, res) {
                             }
                         } else {
                             motivo = "inhibido"
-                            agent.add('¿Disculpe, tiene los equipos encendido?')
+                            agent.add('¿Disculpe, tiene los equipos de la empresa encendidos?')
                             agent.context.set({
                                 name: 'equiposapagados',
                                 lifespan: 1,
@@ -682,7 +729,28 @@ app.post('/webhook', express.json(), function(req, res) {
                                 agent.add("¿Presenta una luz roja encendida en el equipo?");
                                 agent.setContext({ 'name': 'luzroja', 'lifespan': '1' });
                             } else {
+                                try {
+                                    caja = await cajas.findOne({
+                                        attributes: ['potencia'],
+                                        raw: true,
+                                        where: {
+                                            caja_id: equipo.caja_id
+                                        }
+                                    })
 
+                                } catch (e) {
+                                    console.log(e);
+                                }
+                                let atenuacion = caja.potencia - equipo.potencia
+                                if (atenuacion >= 5) {
+                                    agent.add("Tiene la potencia del equipo elevada y necesita visita técnica. Escriba 'ok' para crear su ticket de atención")
+                                    motivo = "Potencia Elevada";
+                                    agent.context.set({
+                                        name: 'escalar',
+                                        lifespan: 1,
+                                    });
+
+                                }
                             }
                         } else {
                             agent.add("¿Se le ha cambiado el nombre de su red wifi?")
@@ -745,7 +813,10 @@ app.post('/webhook', express.json(), function(req, res) {
         let ambiguo = agent.parameters.ambiguo;
 
         if (ambiguo != null) {
-            agent.add(`¿ ${ambiguo} en que sentido? ¿Esta lento, intermitente o no tiene servicio?`)
+            agent.add(`¿
+                                $ { ambiguo }
+                                en que sentido ? ¿Esta lento,
+                                intermitente o no tiene servicio ? `)
         } else {
             agent.add("¿Esta lento, intermitente o no tiene servicio?")
         }
@@ -773,7 +844,8 @@ app.post('/webhook', express.json(), function(req, res) {
 
     function fallback(agent) {
 
-        agent.add(`Escriba Menu para conocer mis funciones o contáctese al 1700 439-439 para más información`);
+        agent.add(`
+                                Escriba Menu para conocer mis funciones o contáctese al 1700 439 - 439 para más información `);
 
     }
 
@@ -782,11 +854,16 @@ app.post('/webhook', express.json(), function(req, res) {
             'name': 'validarcliente',
             'lifespan': '1',
         });
-        agent.add(`1.-Servicio Lento`);
-        agent.add(`2.-Servicio Intermitente`);
-        agent.add(`3.-Sin Servicio`);
-        agent.add(`4.-Consulta de ticket`);
-        agent.add(`5.-Consulta de deuda pendiente`);
+        agent.add(`
+                                1. - Servicio Lento `);
+        agent.add(`
+                                2. - Servicio Intermitente `);
+        agent.add(`
+                                3. - Sin Servicio `);
+        agent.add(`
+                                4. - Consulta de ticket `);
+        agent.add(`
+                                5. - Consulta de deuda pendiente `);
     }
 
 
@@ -835,8 +912,8 @@ app.post('/webhook', express.json(), function(req, res) {
                 total = parseFloat(total) + (parseFloat(factura.subtotal) * parseFloat(factura.iva)) - parseFloat(factura.descuento);
             });
             agent.add(`
-                            Su deuda total es de: $ { total.toFixed(2) }
-                            `);
+                                Su deuda total es de : $ { total.toFixed(2) }
+                                `);
             let solucionado = true;
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
             agent.add('¿Algo mas en lo que pueda servirle?');
@@ -892,10 +969,18 @@ app.post('/webhook', express.json(), function(req, res) {
             switch (motivo) {
                 case "inhibido":
                     if (contrato.plan_id == 1) {
-                        agent.add("Al parecer se le ha resetiado la antena. Escriba OK para agendarle una visita técnica")
+                        msg = "Al parecer se le ha resetiado la antena. Escriba ok para agendarle una visita técnica";
                         agent.context.set({
                             name: 'escalar',
                             lifespan: 1,
+                        });
+                        motivo = "Reset"
+                        agent.setContext({
+                            name: 'cliente',
+                            lifespan: '2',
+                            parameters: {
+                                'motivo': motivo
+                            }
                         });
                     } else {
                         agent.add("Puede que tenga problemas de acceso. Contáctese al 1700 439-439 para gestionar su caso")
@@ -908,13 +993,16 @@ app.post('/webhook', express.json(), function(req, res) {
                     break;
             }
             agent.add(msg);
+
+
         } else
-        if (query == "ok") {
+        if (query == "ok" | query == "OK") {
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
             agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
             if (motivo == "Luz Roja" | motivo == "Parámetros Deficientes" | motivo == "Reset" | motivo == "Potencia Elevada") {
                 CrearTicket(motivo, cliente, contrato)
                 msg = "Se creó un ticket para su problema. El tiempo de atención estimado es de 24 horas laborables"
+                agent.setContext({ 'name': 'preguntar', 'lifespan': '1' });
             }
             agent.add(msg)
         } else {
@@ -968,9 +1056,14 @@ app.post('/webhook', express.json(), function(req, res) {
 
     function ticketsinfecha(ticket, agent) {
         let fecha = ticket.fechaatencion
-        let msg = `Tiene visita por ${ ticket.descripcion } programada para: ${ fecha }`
+        let msg = `
+                                Tiene visita por $ { ticket.descripcion }
+                                programada para : $ { fecha }
+                                `
         if (fecha == null) {
-            msg = `Su visita por ${ ticket.descripcion } esta sin fecha por el momento. En pocos momentos se le asignará su fecha y hora de atención `
+            msg = `
+                                Su visita por $ { ticket.descripcion }
+                                esta sin fecha por el momento.En pocos momentos se le asignará su fecha y hora de atención `
         }
         agent.add(msg)
     }
@@ -1041,7 +1134,7 @@ app.post('/webhook', express.json(), function(req, res) {
     }
     async function Resetno(agent) {
         let motivo = "inhibido"
-        agent.add('Por favor desconect el equipo de la corriente y luego de 5 segundos vuelva a encenderlo. Escriba OK para continuar')
+        agent.add('Por favor desconecte el equipo de la corriente y luego de 5 segundos vuelva a encenderlo. Escriba OK para continuar')
         agent.context.delete("SinServicio-followup");
         agent.setContext({ 'name': 'comprobarservicio', 'lifespan': '1' });
         agent.setContext({
@@ -1096,10 +1189,13 @@ app.post('/webhook', express.json(), function(req, res) {
 
     agent.handleRequest(intentMap);
 
+
 })
 
 
 //arrancamos el servidor
 app.listen(PORT, () => {
-    console.log(` Our app is running on port $ { PORT }`);
+    console.log(`
+                                Our app is running on port $ { PORT }
+                                `);
 })

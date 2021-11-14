@@ -51,7 +51,7 @@ const Sequelize = require('sequelize');
 const db = require('../config/db');
 const bcrypt = require('bcrypt-nodejs');
 
-const Login = db.define('login',{
+const Login = db.define('login', {
     user_id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -69,16 +69,16 @@ const Login = db.define('login',{
         type: Sequelize.STRING(150),
         allowNull: false
     },
-},{
-    hooks:{
-        beforeCreate(usuario){
+}, {
+    hooks: {
+        beforeCreate(usuario) {
             usuario.password = bcrypt.hashSync(usuario.password, bcrypt.genSaltSync(10));
         }
     }
 })
 
 //metodos personalizados
-Login.prototype.verificarPassword= function (password) {
+Login.prototype.verificarPassword = function(password) {
     return bcrypt.compareSync(password, this.password)
 }
 
