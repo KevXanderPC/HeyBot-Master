@@ -486,7 +486,7 @@ app.post('/webhook', express.json(), function(req, res) {
             }
             atenuacion = caja.potencia - equipo.potencia
             if (atenuacion >= 5) {
-                agent.add('Tiene la potencia del equipo elevada y necesita visita técnica. Escriba OK para crear su ticket de atención')
+                agent.add('Tiene la potencia del equipo elevada y necesita visita técnica. Escriba "ok" para crear su ticket de atención')
                 motivo = "Potencia Elevada";
                 agent.context.set({
                     name: 'escalar',
@@ -693,7 +693,7 @@ app.post('/webhook', express.json(), function(req, res) {
                     if (antena.estado == true) {
                         if (equipo.estado == true) {
                             if (equipo.señal <= -68) {
-                                agent.add('Tiene parámetros deficientes en la antena. Escriba ok para crear su ticket de atención')
+                                agent.add('Tiene parámetros deficientes en la antena. Escriba "ok" para crear su ticket de atención')
                                 motivo = "Parámetros deficientes";
                                 agent.context.set({
                                     name: 'escalar',
@@ -843,7 +843,7 @@ app.post('/webhook', express.json(), function(req, res) {
                 }
             });
         } else {
-            agent.add("Por favor desconecte el equipo de la corriente y luego de 5 segundos reconectelo nuevamente. Escriba ok cuando las luces del equipo esten todas encendidas")
+            agent.add('Por favor desconecte el equipo de la corriente y luego de 5 segundos reconectelo nuevamente. Escriba "ok" cuando las luces del equipo esten todas encendidas')
             agent.setContext({ 'name': 'comprobarservicio', 'lifespan': '1' });
         }
     }
@@ -977,7 +977,7 @@ app.post('/webhook', express.json(), function(req, res) {
             switch (motivo) {
                 case "inhibido":
                     if (contrato.plan_id == 1) {
-                        msg = "Al parecer se le ha resetiado la antena. Escriba ok para agendarle una visita técnica";
+                        msg = 'Al parecer se le ha resetiado la antena. Escriba "ok" para agendarle una visita técnica';
                         agent.context.set({
                             name: 'escalar',
                             lifespan: 1,
@@ -991,11 +991,11 @@ app.post('/webhook', express.json(), function(req, res) {
                             }
                         });
                     } else {
-                        agent.add("Puede que tenga problemas de acceso. Contáctese al 1700 439-439 para gestionar su caso")
+                        msg = "Puede que tenga problemas de acceso. Contáctese al 1700 439-439 o acerquese a las oficinas mas cercanas para gestionar su caso"
                     }
                     break;
                 case "reset":
-                    agent.add("Puede que la aplicación no sea compatible con el equipo.Contáctese al 1700 439-439 para gestionar su caso")
+                    msg = "Puede que la aplicación no sea compatible con el equipo.Contáctese al 1700 439-439 o acerquese a las oficinas mas cercanas para gestionar su caso"
                     break;
                 default:
                     break;
@@ -1079,11 +1079,11 @@ app.post('/webhook', express.json(), function(req, res) {
     function ParametrosDeficientes(agent) {
         let resp = agent.parameters
         if (resp.positivo) {
-            agent.add("El movimiento de la antena ocasionó que dejara de captar buena señal. Se agendará un ticket para visita técnica, por favor escriba ok para continuar")
+            agent.add('El movimiento de la antena ocasionó que dejara de captar buena señal. Se agendará un ticket para visita técnica, por favor escriba "ok" para continuar')
             agent.setContext({ 'name': 'escalar', 'lifespan': '1' });
 
         } else {
-            agent.add("Puede que se haya movido por el viento. Se agendará un ticket para visita técnica, por favor escriba ok para continuar")
+            agent.add('Puede que se haya movido por el viento. Se agendará un ticket para visita técnica, por favor escriba "ok" para continuar')
             agent.setContext({ 'name': 'escalar', 'lifespan': '1' });
         }
     }
@@ -1142,7 +1142,7 @@ app.post('/webhook', express.json(), function(req, res) {
     }
     async function Resetno(agent) {
         let motivo = "inhibido"
-        agent.add('Por favor desconecte el equipo de la corriente y luego de 5 segundos vuelva a encenderlo. Escriba OK para continuar')
+        agent.add('Por favor desconecte el equipo de la corriente y luego de 5 segundos vuelva a encenderlo. Escriba "ok" cuando lo haya realizado')
         agent.context.delete("SinServicio-followup");
         agent.setContext({ 'name': 'comprobarservicio', 'lifespan': '1' });
         agent.setContext({
