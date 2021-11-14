@@ -913,7 +913,7 @@ app.post('/webhook', express.json(), function(req, res) {
             let factura;
             factura = await facturas.findAll({
                 raw: true,
-                where: { contrato_id: contrato.contrato_id, estado: false }
+                where: { contrato_id: contrato.contrato_id, estado: true }
             })
             let total = 0;
             factura.forEach(factura => {
