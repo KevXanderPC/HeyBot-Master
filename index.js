@@ -1065,12 +1065,12 @@ app.post('/webhook', express.json(), function(req, res) {
     function ticketsinfecha(ticket, agent) {
         let fecha = ticket.fechaatencion
         let msg = `
-                                Tiene visita por $ { ticket.descripcion }
-                                programada para : $ { fecha }
+                                Tiene visita por ${ ticket.descripcion }
+                                programada para : ${ fecha }
                                 `
         if (fecha == null) {
             msg = `
-                                Su visita por $ { ticket.descripcion }
+                                Su visita por ${ ticket.descripcion }
                                 esta sin fecha por el momento.En pocos momentos se le asignará su fecha y hora de atención `
         }
         agent.add(msg)
