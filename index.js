@@ -920,7 +920,7 @@ app.post('/webhook', express.json(), function(req, res) {
                 total = parseFloat(total) + (parseFloat(factura.subtotal) * parseFloat(factura.iva)) - parseFloat(factura.descuento);
             });
             agent.add(`
-                                Su deuda total es de : $ { total.toFixed(2) }
+                                Su deuda total es de : ${ total.toFixed(2) }
                                 `);
             let solucionado = true;
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
