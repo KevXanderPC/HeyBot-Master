@@ -152,7 +152,7 @@ app.post('/webhook', express.json(), function(req, res) {
             // agent.add(`El cliente ${cliente.nombre} verdad?`)
             var possibleResponse = [
                 `El cliente ${cliente.nombre} ¿correcto?`,
-                `Confírmeme que se trata del cliente ${cliente.nombre}`,
+                `¿Se trata del cliente ${cliente.nombre}?`,
                 `¿Con el cliente ${cliente.nombre}?`
             ];
             var pick = Math.floor(Math.random() * possibleResponse.length);
@@ -282,6 +282,9 @@ app.post('/webhook', express.json(), function(req, res) {
             agent.context.set({
                 name: 'clientevalidado',
                 lifespan: 1
+            });
+            contrato.forEach(contrato => {
+                agent.add(`${contrato.direccion}`)
             });
 
         } else {
@@ -756,6 +759,10 @@ app.post('/webhook', express.json(), function(req, res) {
                             agent.add("¿Se le ha cambiado el nombre de su red wifi?")
                             motivo = "reset"
                             agent.setContext({ 'name': 'Reset-followup', 'lifespan': '1' });
+                            agent.context.set({
+                                name: 'Reset.followup',
+                                lifespan: 1,
+                            });
                         }
                     } else {
                         agent.add('Mil disculpas estimad@ hay un problema a nivel general. Se resolverá en brevedad posible')
