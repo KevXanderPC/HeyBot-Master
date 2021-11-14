@@ -763,6 +763,7 @@ app.post('/webhook', express.json(), function(req, res) {
                                 name: 'Reset.followup',
                                 lifespan: 1,
                             });
+                            agent.context.delete("SinServicio-followup");
                         }
                     } else {
                         agent.add('Mil disculpas estimad@ hay un problema a nivel general. Se resolverá en brevedad posible')
