@@ -807,7 +807,7 @@ app.post('/webhook', express.json(), function(req, res) {
             });
         } else if (resp.Negativo) {
             agent.setContext({ 'name': 'finalizar', 'lifespan': '1' });
-            agent.add("Listo, puede consultarme en cualquier otra ocasión que lo desee")
+            agent.add("Listo, puede consultarme en cualquier otra ocasión que lo desee, que tenga un buen dia")
         } else {
             agent.add("Respondame con si o no por favor")
             agent.setContext({ 'name': 'preguntar', 'lifespan': '1' });
@@ -917,11 +917,9 @@ app.post('/webhook', express.json(), function(req, res) {
             })
             let total = 0;
             factura.forEach(factura => {
-                total = parseFloat(total) + (parseFloat(factura.subtotal) * parseFloat(factura.iva)) - parseFloat(factura.descuento);
+                total = parseFloat(factura.subtotal) + parseFloat(factura.iva) - parseFloat(factura.descuento);
             });
-            agent.add(`
-                                Su deuda total es de : ${ total.toFixed(2) }
-                                `);
+            agent.add(`Su deuda total es de : ${ total.toFixed(2) }`);
             let solucionado = true;
             SendReport(cliente, contrato, requerimiento, motivo, solucionado)
             agent.add('¿Algo mas en lo que pueda servirle?');
