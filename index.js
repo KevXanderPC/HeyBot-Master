@@ -918,7 +918,7 @@ app.post('/webhook', express.json(), function(req, res) {
             let total = 0;
             factura.forEach(factura => {
                 //parseFloat(factura.iva) no se porque no toma ese valor pero ya toco exponer
-                total = parseFloat(total) + parseFloat(factura.subtotal) + (parseFloat(factura.subtotal) * 0.12) - parseFloat(factura.descuento);
+                total = parseFloat(total) + parseFloat(factura.subtotal) + (parseFloat(factura.subtotal) * parseFLoat(0.12)) - parseFloat(factura.descuento);
             });
             agent.add(`Su deuda total es de : ${ total.toFixed(2) }`);
             let solucionado = true;
